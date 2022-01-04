@@ -79,7 +79,11 @@ def raw_usr_dir_input(dir_type):
 
 def compliant_usr_dir(dir_type):
     """
+    validated_path = compliant_usr_dir(dir_type)
 
+    Function accepts the directory type as a string, which is passed on to the
+    function that asks for user input to the specified path. This function then
+    checks if the path exists. The output is a validated directory path.
     """
 
     if dir_type == 'src':
@@ -98,25 +102,26 @@ def compliant_usr_dir(dir_type):
     elif dir_type == 'des':
         # this snippet ensures that the first 2 ancestors of destination directory exists, allowing any
         # following children to be created if desired.
-        valid_ancestors_exists = False
-
-        # TO DO: This snippet should be revised on update to python 3.10 to exploit the
-        # negative indexing of path objects using path.parents[-2] for the first 2 ancestors
-
-        while not valid_ancestors_exists:
+        path_exists = False
+        while not path_exists:
             raw_dir_path = raw_usr_dir_input(dir_type)
-            try:
-                first_2_ancestors = Path(
-                    raw_dir_path).parts[0]+Path(raw_dir_path).parts[1]
-            except IndexError:
-                print("Prohibited or non-existent location! Try again.")
-                continue
+            if dir_exists(dir_type, raw_dir_path):
+                validated_dir = raw_dir_path
+                path_exists = True
             else:
-                if dir_exists(dir_type, first_2_ancestors):
-                    validated_dir = raw_dir_path
-                    valid_ancestors_exists = True
+                try:
+                    first_2_ancestors = Path(
+                        raw_dir_path).parts[0]+Path(raw_dir_path).parts[1]
+                except IndexError:
+                    print("Prohibited or non-existent location! Try again.")
+                    continue
                 else:
-                    print(
-                        "The destination directory does not exist AND cannot be created! \nEnter a valid destination path.")
+                    if dir_exists(dir_type, first_2_ancestors):
+                        Path(raw_dir_path).mkdir(parents=True, exist_ok=True)
+                        validated_dir = raw_dir_path
+                        path_exists = True
+                    else:
+                        print(
+                            "The destination directory does not exist AND cannot be created! \nEnter a valid destination path.")
 
     return validated_dir

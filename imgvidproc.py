@@ -22,7 +22,7 @@ def welcome_msg():
     print("\t\tb. Resize to a different image format from source file, e.g. jpg->png.")
 
 
-def list_all_supported_img_files(src_dir, supported_file_types=('*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.PNG')):
+def list_all_supported_img_files(src_dir, supported_file_types=('*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.bmp')):
     """
     Function lists all supported image formats in the validated source directory path.
 
@@ -39,4 +39,35 @@ def list_all_supported_img_files(src_dir, supported_file_types=('*.jpg', '*.JPG'
 
     return matching_file_list
 
-    # if there are no matching files in the list, return to main and print "no image file in source directory"
+
+def resize_images(img_path_list, des_dir, percent_red=50):
+    """
+    Function takes in the the list of full path to all image files, 
+    the destination directory, and the percentage reduction desired.
+    A default of 50% reduction is set.
+
+    Note that the percentage reduction applies a proportional scaling. That is,
+    both width and height are scaled equally.
+    """
+
+    if not img_path_list:  # if there are no image files in the list return to main
+        print("There are no image files or supported image files in the source directory.")
+        return
+
+    # loop over all images in the list
+    percent_red = percent_red/100  # percent reduction in per units
+    for img_path in img_path_list:
+        img = cv.imread(img_path, 1)
+        img_name = 're_' + os.path.split(img_path)[1]
+        img_path = os.path.join(des_dir, img_name)
+
+        # only execute resize if images are larger than 3 MP. Pixel size < 3 MP suggests
+        #  an already small image.
+        pixel_size = img.size/1e6  # pixel size in mega pixels
+        if pixel_size > 3.0:
+            # x--> width, y--> height
+            resized_img = cv.resize(
+                img, None, fx=percent_red, fy=percent_red)
+
+            # save image in image path
+            cv.imwrite(img_path, resized_img)

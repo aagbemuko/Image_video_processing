@@ -32,6 +32,5 @@ else:
 all_img_files = imgproc.list_all_supported_img_files(src_dir)
 
 
-# move this to the inside the function that takes in the image files
-if not all_img_files:
-    print("There are no supported image files in the source directory")
+# Call to resize images
+imgproc.resize_images(all_img_files, des_dir)
