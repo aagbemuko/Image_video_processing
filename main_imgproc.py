@@ -12,6 +12,12 @@ menu_options = {'1a': ('1', '1a', 'a1'),
                 '1b': ('1b', 'b1')}
 
 
+# Supported image formats
+supported_img_formats = ('jpg', 'JPG',
+                         'jpeg', 'JPEG',
+                         'png', 'PNG')
+
+
 # Menu option mapping
 usr_option = usrip.menu_mapping(menu_options)
 
@@ -29,9 +35,10 @@ else:
 
 
 # List all image files in source directory
-all_img_files = imgproc.list_all_supported_img_files(src_dir)
+all_img_files = imgproc.list_all_supported_img_files(
+    src_dir, supported_img_formats)
 
 
-# move this to the inside the function that takes in the image files
-if not all_img_files:
-    print("There are no supported image files in the source directory")
+# Call to resize images
+imgproc.resize_images(all_img_files, des_dir,
+                      supported_img_formats, usr_option)
