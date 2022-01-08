@@ -5,7 +5,7 @@ from sys import stdout
 from time import sleep
 from pathlib import Path
 from usrinputsvalidation import yes_no
-from math import prod
+from math import prod, ceil
 
 
 def welcome_msg():
@@ -45,28 +45,31 @@ def list_all_supported_img_files(src_dir, supported_img_formats):
     return matching_file_list
 
 
-def percent_change(path_list, des_dir, supported_img_formats):
+def resize_images(path_list, des_dir, supported_img_formats, usr_option):
     """
-    Function for image resize based on percentage change.
-
-    Note that the percentage change applies a proportional scaling. 
-    That is, both width and height are scaled equally.
+    Function to resize images given the list of objects in the path, the supported image
+    formats, and user selected option.
     """
 
     # ask user if they'd like to resize images to a different format from source image
     change_src_img_format = yes_no(
         "Save resized image files in a different format from original?")
 
-    # if previous statement is true:
+    # if previous statement is true ask for the new format to save images:
     if change_src_img_format:
         new_format = new_img_format(supported_img_formats)
 
-    # ask user for the percentage change
-    prompt = "Enter the desired percentage change"
-    percent_red = usr_desired_specs(prompt, type_of_change="percentage")
+    if usr_option == '1a':
+        # ask user for the percentage change if this option is selected
+        prompt = "Enter the desired percentage change"
+        percent_red = usr_desired_specs(prompt, type_of_change="percentage")
+        percent_red = percent_red/100  # percent change in per units
+    elif usr_option == '1b':
+        # ask user for desired dimensions if this option is selected
+        prompt = "Enter the desired dimensions as indicated"
+        desired_dimensions = usr_desired_specs(prompt, type_of_change="fixed")
 
     # loop preamble
-    percent_red = percent_red/100  # percent change in per units
     process_counter = 0
     percent_complete = 0
     nr_of_img_files = len(path_list)
@@ -75,108 +78,50 @@ def percent_change(path_list, des_dir, supported_img_formats):
     for img_path in path_list:
         img = cv.imread(img_path, 1)
 
-        # if it is true that user desires a different format and current format
+        # if it is true that the user desires a different format and current format
         # is not the same as the new format, then the code snippet below is executed.
         if change_src_img_format and os.path.splitext(img_path)[1] != '.' + new_format:
             img_path = f"{os.path.splitext(img_path)[0]}.{new_format}"
         img_name = 're_' + os.path.split(img_path)[1]
         img_path = os.path.join(des_dir, img_name)
-
-        # only execute resize if images are larger than 3 MP. Pixel size < 3 MP
-        # suggests an already small image. TO DO: revise this to allow user decide.
         pixel_size = img.size/1e6  # pixel size in mega pixels
 
-        if pixel_size > 3.0:
-            # x--> width, y--> height
-            resized_img = cv.resize(img, None, fx=percent_red, fy=percent_red)
+        if usr_option == '1a':
+            desired_height = ceil(percent_red*img.shape[0])
+            desired_width = ceil(percent_red*img.shape[1])
+            desired_dimensions = (desired_width, desired_height)
 
-            # save image in path
-            cv.imwrite(img_path, resized_img)
+            # only execute resize if images are larger than 3 MP. Pixel size < 3 MP
+            # suggests an already small image. TO DO: revise this to allow user decide.
+            if pixel_size > 3.0:
+                # x--> width, y--> height
+                resized_img = cv.resize(img, desired_dimensions)
 
-            process_counter += 1  # count resized images
+                # save image in path
+                cv.imwrite(img_path, resized_img)
+
+                process_counter += 1  # count resized images
+        elif usr_option == '1b':
+            # desired size in mega pixels
+            desired_pixel_size = prod(desired_dimensions)/1e6
+
+            # only execute resize if images are larger than the desired dimensions
+            if pixel_size > desired_pixel_size:
+                # x--> width, y--> height
+                resized_img = cv.resize(img, desired_dimensions)
+
+                # save image in image path
+                cv.imwrite(img_path, resized_img)
+
+                process_counter += 1  # count resized images
 
         percent_complete += 100 / nr_of_img_files
         stdout.write("\r%d%% complete" % percent_complete)
         stdout.flush()
         sleep(0.02)
-
     print(f"\nImage resize complete. Check the path {des_dir}")
     print(
         f"Total unique image files resized: {process_counter}/{nr_of_img_files}")
-
-
-def specific_size_change(path_list, des_dir, supported_img_formats):
-    """
-    Function for image resize based on specific dimensions.
-    """
-
-    # ask user if they'd like to resize images to a different format from source image
-    change_src_img_format = yes_no(
-        "Save resized image files in a different format from original?")
-
-    # if previous statement is true:
-    if change_src_img_format:
-        new_format = new_img_format(supported_img_formats)
-
-    # ask user for desired dimensions
-    prompt = "Enter the desired dimensions as indicated"
-    desired_dimensions = usr_desired_specs(prompt, type_of_change="fixed")
-
-    # loop preamble
-    process_counter = 0
-    percent_complete = 0
-    nr_of_img_files = len(path_list)
-
-    # loop over all images in the list
-    for img_path in path_list:
-        img = cv.imread(img_path, 1)
-
-        # if it is true that user desires a different format and current format
-        # is not the same as the new format, then the code snippet below is executed
-        if change_src_img_format and os.path.splitext(img_path)[1] != '.' + new_format:
-            img_path = f"{os.path.splitext(img_path)[0]}.{new_format}"
-        img_name = 're_' + os.path.split(img_path)[1]
-        img_path = os.path.join(des_dir, img_name)
-
-        # only execute resize if images are larger than the desired dimensions
-        pixel_size = img.size/1e6  # pixel size in mega pixels
-        # desired size in mega pixels
-        desired_pixel_size = prod(desired_dimensions)/1e6
-        if pixel_size > desired_pixel_size:
-            # x--> width, y--> height
-            resized_img = cv.resize(img, desired_dimensions)
-
-            # save image in image path
-            cv.imwrite(img_path, resized_img)
-
-            process_counter += 1  # count resized images
-
-        percent_complete += 100 / nr_of_img_files
-        stdout.write("\r%d%% complete" % percent_complete)
-        stdout.flush()
-        sleep(0.02)
-
-    print(f"\nImage resize complete. Check the path {des_dir}")
-    print(
-        f"Total unique image files resized: {process_counter}/{nr_of_img_files}")
-
-
-def resize_images(img_path_list, des_dir, supported_img_formats, usr_option):
-    """
-    This 'wrapper' function takes in the the list of full path to all image files, 
-    the destination directory, supported image formats, and the user selected option.
-    """
-
-    # if there are no image files in the list return to main
-    if not img_path_list:
-        print("There are no image files or supported image files in the source directory.")
-        return
-
-    # call the desired function based on user selection
-    if usr_option == '1a':
-        percent_change(img_path_list, des_dir, supported_img_formats)
-    elif usr_option == '1b':
-        specific_size_change(img_path_list, des_dir, supported_img_formats)
 
 
 def usr_desired_specs(prompt, type_of_change=None):
